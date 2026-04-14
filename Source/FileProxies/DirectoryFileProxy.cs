@@ -37,6 +37,13 @@
             return File.OpenRead(Path.Combine(modDirectory, localPath));
         }
 
+        public DateTime GetLastModified(string localPath)
+        {
+            return File.GetLastWriteTimeUtc(Path.Combine(modDirectory, localPath));
+        }
+
+        public void Refresh() { }
+
         public void Dispose() { }
 
 

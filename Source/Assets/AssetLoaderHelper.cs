@@ -1,4 +1,3 @@
-﻿
 using Common;
 using FEZRepacker.Core.Conversion;
 using FEZRepacker.Core.FileSystem;
@@ -10,32 +9,40 @@ namespace HatModLoader.Source.Assets
     {
         private static readonly string[] AllowedRawExtensions = { ".xnb", ".ogg", ".fxc" };
 
-        public static List<Asset> GetListFromFileDictionary(Dictionary<string, Stream> files)
+        public static List<Asset> GetListFromFileDictionary(IReadOnlyList<File> files)
         {
             var assets = new List<Asset>();
 
-            var bundles = FileBundle.BundleFiles(files);
+            var byPath = files.ToDictionary(af => af.RawPath, af => af);
+            var bundles = FileBundle.BundleFiles(byPath.ToDictionary(kv => kv.Key, kv => kv.Value.Stream));
 
             foreach (var bundle in bundles)
             {
+                var lastModified = byPath
+                    .Where(kv => kv.Key.StartsWith(bundle.BundlePath))
+                    .Select(kv => kv.Value.Timestamp)
+                    .DefaultIfEmpty(default)
+                    .Max();
                 try
                 {
                     var deconvertedObject = FormatConversion.Deconvert(bundle)!;
                     using var xnbData = XnbSerializer.Serialize(deconvertedObject);
-
-                    assets.Add(new Asset(bundle.BundlePath, ".xnb", xnbData));
+                    assets.Add(new Asset(bundle.BundlePath, ".xnb", xnbData, lastModified));
                 }
                 catch(Exception ex)
                 {
-                    bool savedAnyRawFiles = false;
+                    var savedAnyRawFiles = false;
                     foreach (var file in bundle.Files)
                     {
                         var extension = file.Extension;
                         if (extension.Length == 0) extension = bundle.MainExtension;
-                        if (!AllowedRawExtensions.Contains(extension)) continue;
+                        if (!AllowedRawExtensions.Contains(extension))
+                        {
+                            continue;
+                        }
 
                         file.Data.Seek(0, SeekOrigin.Begin);
-                        assets.Add(new Asset(bundle.BundlePath, extension, file.Data));
+                        assets.Add(new Asset(bundle.BundlePath, extension, file.Data, lastModified));
                         savedAnyRawFiles = true;
                     }
 
@@ -51,18 +58,18 @@ namespace HatModLoader.Source.Assets
             return assets;
         }
 
-        public static List<Asset> LoadPakPackage(Stream stream)
+        public struct File
         {
-            var assets = new List<Asset>();
+            public readonly string RawPath;
+            public readonly Stream Stream;
+            public readonly DateTime Timestamp;
 
-            using var pakReader = new PakReader(stream);
-            foreach(var file in pakReader.ReadFiles())
+            public File(string rawPath, Stream stream, DateTime timestamp)
             {
-                using var fileData = file.Open();
-                assets.Add(new Asset(file.Path, file.FindExtension(), fileData));
+                RawPath = rawPath;
+                Stream = stream;
+                Timestamp = timestamp;
             }
-
-            return assets;
         }
     }
 }

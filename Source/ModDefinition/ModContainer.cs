@@ -11,11 +11,11 @@ public class ModContainer : IDisposable
     public IFileProxy FileProxy { get; }
 
     public Metadata Metadata { get; }
-    
+
     public AssetMod AssetMod { get; internal set; }
-    
+
     public CodeMod CodeMod { get; internal set; }
-    
+
     private IAssemblyResolver _assemblyResolver;
 
     public ModContainer(IFileProxy fileProxy, Metadata metadata)
@@ -42,9 +42,26 @@ public class ModContainer : IDisposable
         }
     }
 
-    public List<Asset> GetAssets()
+    public IEnumerable<Asset> GetAssets()
     {
         return AssetMod?.Assets ?? [];
+    }
+
+    public IEnumerable<Asset> ReloadAssets()
+    {
+        FileProxy.Refresh();
+        if (AssetMod == null)
+        {
+            if (!AssetMod.TryLoad(FileProxy, out var assetMod))
+            {
+                return [];
+            }
+
+            AssetMod = assetMod;
+            return AssetMod.Assets;
+        }
+
+        return AssetMod.Reload(FileProxy);
     }
 
     public void Dispose()

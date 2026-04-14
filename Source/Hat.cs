@@ -1,5 +1,8 @@
 ﻿using Common;
+using FezEngine.Tools;
 using FezGame;
+using FezGame.Services;
+using HatModLoader.Installers;
 using HatModLoader.Source.AssemblyResolving;
 using HatModLoader.Source.Assets;
 using HatModLoader.Source.FileProxies;
@@ -139,7 +142,7 @@ namespace HatModLoader.Source
             
             foreach (var mod in Mods)
             {
-                if (AssetMod.TryLoad(mod.FileProxy, mod.Metadata, out var assetMod))
+                if (AssetMod.TryLoad(mod.FileProxy, out var assetMod))
                 {
                     mod.AssetMod = assetMod;
                     assetModCount += 1;
@@ -174,9 +177,49 @@ namespace HatModLoader.Source
             }
         }
     
-        public List<Asset> GetFullAssetList()
+        public IEnumerable<Asset> GetFullAssetList()
         {
-            return Mods.SelectMany(x => x.GetAssets()).ToList();
+            return Mods.SelectMany(mc => mc.GetAssets());
+        }
+
+        public void OnGameActivated()
+        {
+            var changedAssets = Mods.SelectMany(mc => mc.ReloadAssets())
+                .Where(a => a.Extension != ".fxc")
+                .ToList();
+            
+            if (changedAssets.Count < 1)
+            {
+                return;
+            }
+
+            foreach (var asset in changedAssets)
+            {
+                if (asset.IsRemoved)
+                {
+                    AssetManagementInstaller.RemoveAsset(asset);
+                }
+                else
+                {
+                    AssetManagementInstaller.InjectAsset(asset);
+                }
+                
+                if (!asset.IsMusicFile)
+                {
+                    AssetManagementInstaller.EvictFromCommon(asset.AssetPath);
+                }
+            }
+
+            Logger.Log("HAT", $"Reloaded {changedAssets.Count} asset(s)");
+
+            var levelManager = ServiceHelper.Get<IGameLevelManager>();
+            var currentLevel = levelManager.Name;
+            if (!string.IsNullOrEmpty(currentLevel))
+            {
+                levelManager.Name = null;
+                levelManager.ChangeLevel(currentLevel);
+                Logger.Log("HAT", $"Reloading {currentLevel}...");
+            }
         }
 
         public static void RegisterRequiredDependencyResolvers()

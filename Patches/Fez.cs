@@ -32,10 +32,9 @@ namespace FezGame
         {
             HatML = new Hat(this);
             HatML.InitializeAssemblies();
-            //HatML.InitializeAssets(musicPass: false);
             orig_Initialize();
             DrawingTools.Init();
-            //HatML.InitializeAssets(musicPass: true);
+            Activated += (_, _) => HatML.OnGameActivated();
         }
 
         internal static extern void orig_LoadComponents(Fez game);
