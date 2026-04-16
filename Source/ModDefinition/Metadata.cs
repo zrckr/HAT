@@ -1,7 +1,7 @@
-﻿using System.Runtime.InteropServices;
-using System.Xml.Serialization;
+﻿using System.Xml.Serialization;
 using Common;
 using HatModLoader.Source.FileProxies;
+// ReSharper disable InconsistentNaming
 
 namespace HatModLoader.Source.ModDefinition
 {
@@ -98,28 +98,7 @@ namespace HatModLoader.Source.ModDefinition
         {
             [XmlAttribute] public Architecture Architecture { get; set; }
     
-            [XmlIgnore] public OSPlatform Platform { get; set; }
-            
-            [XmlAttribute("Platform")]
-            public string PlatformString
-            {
-                get
-                {
-                    if (Platform == OSPlatform.Windows) return "Windows";
-                    if (Platform == OSPlatform.Linux) return "Linux";
-                    return Platform == OSPlatform.OSX ? "OSX" : "Unknown";
-                }
-                set
-                {
-                    Platform = value switch
-                    {
-                        "Windows" => OSPlatform.Windows,
-                        "Linux" => OSPlatform.Linux,
-                        "OSX" => OSPlatform.OSX,
-                        _ => throw new ArgumentException($"Unknown platform: {value}")
-                    };
-                }
-            }
+            [XmlAttribute] public OSPlatform Platform { get; set; }
 
             [XmlText]
             public string Path
@@ -129,6 +108,21 @@ namespace HatModLoader.Source.ModDefinition
             }
     
             private string _path;
+        }
+
+        public enum Architecture
+        {
+            X86,
+            X64,
+            Arm,
+            Arm64
+        }
+
+        public enum OSPlatform
+        {
+            Windows,
+            Linux,
+            OSX
         }
     }
 }

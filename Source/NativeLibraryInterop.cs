@@ -15,17 +15,17 @@ namespace HatModLoader.Source
 
         [DllImport("libdl", CallingConvention = CallingConvention.Cdecl)]
         private static extern int Dlclose(IntPtr handle);
-            
+
         public static IntPtr Load(string fileName)
         {
-            return RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            return Environment.OSVersion.Platform == PlatformID.Win32NT
                 ? LoadLibrary(fileName)
                 : Dlopen(fileName, 1);
         }
-            
+
         public static bool Free(IntPtr libraryHandle)
         {
-            return RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            return Environment.OSVersion.Platform == PlatformID.Win32NT
                 ? FreeLibrary(libraryHandle)
                 : Dlclose(libraryHandle) == 0;
         }
