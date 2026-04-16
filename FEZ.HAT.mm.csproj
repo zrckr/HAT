@@ -90,4 +90,16 @@
       <Private>False</Private>
     </Reference>
   </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Cli\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Remove="Cli\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Cli\**" />
+  </ItemGroup>
 </Project>

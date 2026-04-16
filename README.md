@@ -10,17 +10,27 @@ When patched into the FEZ instance, it can be used to dynamically load game modi
 
 ## Installing mod loader
 
-1. Download latest `HAT.zip` from Release tab and unpack it in the game's directory (next to the `FEZ.exe`).
-2. Run `hat_install.bat` (for Windows) or `hat_install.sh` (for Linux). This should generate new executable file called `MONOMODDED_FEZ.exe`.
-3. Run `MONOMODDED_FEZ.exe` and enjoy modding!
+1. Download the installer for your platform from the [Releases](../../releases) page.
 
-In the future, this process will be automated by a custom-made installer/mod manager (something like Olympus for Celeste's Everest).
+| Platform | File |
+|----------|------|
+| Windows  | `HATinstaller-win-x64.exe` |
+| Linux    | `HATinstaller-linux-x64` |
+| macOS    | `HATinstaller-osx-x64` |
+
+2. Run the installer. FEZ will be detected automatically from your Steam or GOG library. If detection fails, drop the installer into your FEZ game folder and run it from there, or use `--path <dir>`.
+
+3. Run `HAT.exe` (Windows) or `./HAT.sh` (Linux/macOS) and enjoy modding!
+
+> [!NOTE]
+> 
+> Linux/macOS requires system Mono (`mono` or similar package) for HAT installation.
 
 ## Adding mods
 
 1. On first HAT launch, `Mods` directory should be created in the executable's directory. If not, create it.
 2. Download the mod's archive and put it in this directory.
-3. Start the game with `MONOMODDED_FEZ.exe` and enjoy your mod!
+3. Start the game with `HAT.exe` / `./HAT.sh` and enjoy your mod!
 
 It's that simple!
 

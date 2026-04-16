@@ -1,0 +1,485 @@
+﻿using System.IO.Compression;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
+using AsmResolver;
+using AsmResolver.PE;
+using AsmResolver.PE.Builder;
+using AsmResolver.PE.Win32Resources.Icon;
+using Microsoft.Win32;
+using Mono.Cecil;
+using Mono.Cecil.Cil;
+using MonoMod;
+
+namespace FEZ.HAT.cli;
+
+public static class Program
+{
+    private const string FezExecutable = "FEZ.exe";
+
+    private const string HatExecutable = "HAT.exe";
+
+    private const string MonoRoot = "/usr/lib/mono";
+
+    public static void Main(string[] args)
+    {
+        PrintHeader();
+        try
+        {
+            CheckPlatformRequirements();
+            if (TryFindFezExecutable(args, out var fezPath))
+            {
+                ExtractHatDependencies(fezPath);
+                var hatPath = PatchExecutable(fezPath);
+                ReplaceExecutableIcon(hatPath);
+                CreateModsFolder(hatPath);
+                PostInstallationSetup(hatPath);
+            }
+        }
+        catch (InstallerException ex)
+        {
+            Console.WriteLine($"[ERROR] {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Unexpected error: {ex}");
+            Console.WriteLine("Please file a bug at https://github.com/FEZModding/HAT/issues");
+        }
+
+        WaitForUserInput();
+    }
+
+    private static void CheckPlatformRequirements()
+    {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            if (!Directory.Exists(MonoRoot))
+            {
+                throw new InstallerException(
+                    "System Mono not found. Install `mono` or similar package using your package manager.");
+            }
+        }
+    }
+
+    private static void PrintHeader()
+    {
+        using var stream = GetResource("HAT.txt");
+        using var logo = new StreamReader(stream);
+        Console.WriteLine(logo.ReadToEnd());
+
+        const int logoWidth = 50;
+        var version = Assembly.GetExecutingAssembly().GetName().Version!.ToString(3);
+
+        Console.WriteLine($"HAT Installer v{version}".PadLeft(logoWidth));
+        Console.WriteLine("Created by zerocker and FEZModding community".PadLeft(logoWidth));
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            Console.WriteLine($"Platform: Windows ({RuntimeInformation.ProcessArchitecture})".PadLeft(logoWidth));
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            Console.WriteLine($"Platform: Linux ({RuntimeInformation.ProcessArchitecture})".PadLeft(logoWidth));
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            Console.WriteLine($"Platform: macOS ({RuntimeInformation.ProcessArchitecture})".PadLeft(logoWidth));
+        }
+
+        Console.WriteLine(); // separator
+    }
+
+    private static bool TryFindFezExecutable(string[] args, out string executable)
+    {
+        var path = string.Empty;
+        {
+            Console.WriteLine("[HAT] Checking CLI \"--path\" or \"-p\" argument");
+            var queue = new Queue<string>(args);
+            while (queue.Count > 0)
+            {
+                switch (queue.Dequeue().ToLowerInvariant())
+                {
+                    case "-p" or "--path":
+                        path = Path.GetFullPath(queue.Dequeue());
+                        break;
+                }
+            }
+        }
+
+        if (string.IsNullOrEmpty(path))
+        {
+            Console.WriteLine("[HAT] Checking current working directory");
+            var cwd = Environment.CurrentDirectory;
+            if (File.Exists(Path.Combine(cwd, FezExecutable)))
+            {
+                path = cwd;
+            }
+        }
+
+        if (string.IsNullOrEmpty(path))
+        {
+            Console.WriteLine("[HAT] Checking Steam library");
+            string steamPath;
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                steamPath = (string)Registry.GetValue(
+                    @"HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Valve\Steam",
+                    "InstallPath",
+                    string.Empty
+                )!;
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                var candidates = new[]
+                {
+                    Path.Combine(home, ".steam", "steam"),
+                    Path.Combine(home, ".local", "share", "Steam")
+                };
+
+                steamPath = Array.Find(candidates, Directory.Exists) ?? "";
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                var path1 = Path.Combine(home, "Library", "Application Support", "Steam");
+                steamPath = Directory.Exists(path1) ? path1 : string.Empty;
+            }
+            else
+            {
+                steamPath = string.Empty;
+            }
+
+            if (!string.IsNullOrEmpty(steamPath))
+            {
+                var vdfPath = Path.Combine(steamPath, "steamapps", "libraryfolders.vdf");
+                if (File.Exists(vdfPath))
+                {
+                    var text = File.ReadAllText(vdfPath);
+                    var matches = Regex.Matches(text, @"""path""\s+""([^""]+)""");
+
+                    foreach (Match m in matches)
+                    {
+                        var folder = m.Groups[1].Value.Replace(@"\\", @"\"); // unescape VDF backslashes
+                        var candidate = Path.Combine(folder, "steamapps", "common", "FEZ");
+                        if (Directory.Exists(candidate))
+                        {
+                            path = candidate;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (string.IsNullOrEmpty(path))
+        {
+            Console.WriteLine("[HAT] Checking GOG library");
+            string gogPath;
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                gogPath = @"C:\Program Files (x86)\GOG Galaxy\Games\FEZ";
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                gogPath = Path.Combine(home, "GOG Games", "FEZ");
+            }
+            else
+            {
+                // GOG has no macOS default for this title
+                gogPath = string.Empty;
+            }
+
+            if (!string.IsNullOrEmpty(gogPath) && Directory.Exists(gogPath))
+            {
+                path = gogPath;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(path))
+        {
+            executable = Path.Combine(path, FezExecutable);
+            if (File.Exists(executable))
+            {
+                Console.WriteLine($"[HAT] Executable found at {executable}");
+                return true;
+            }
+        }
+
+        executable = string.Empty;
+        throw new InstallerException("Could not find FEZ. Use --path <dir> or run from the FEZ game directory.");
+    }
+
+    private static void ExtractHatDependencies(string path)
+    {
+        using var stream = GetResource("HAT.zip");
+        using var zip = new ZipArchive(stream, ZipArchiveMode.Read);
+
+        foreach (var entry in zip.Entries)
+        {
+            var destination = Path.Combine(Path.GetDirectoryName(path)!, entry.FullName);
+            if (entry.FullName.EndsWith('/'))
+            {
+                Directory.CreateDirectory(destination);
+                continue;
+            }
+
+            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+            using var source = entry.Open();
+            using var file = File.Create(destination);
+            source.CopyTo(file);
+            Console.WriteLine($"[HAT] Extracting {entry.FullName}");
+        }
+    }
+
+    private static string PatchExecutable(string path)
+    {
+        var basePath = Path.GetDirectoryName(path)!;
+        using var modder = new MonoModder();
+
+        modder.InputPath = path;
+        modder.OutputPath = path.Replace(FezExecutable, HatExecutable);
+        modder.ReadingMode = ReadingMode.Deferred;
+        modder.AssemblyResolver = BuildResolver(basePath);
+        modder.MissingDependencyThrow = true;
+        modder.WriterParameters = new WriterParameters
+        {
+            SymbolWriterProvider = new PortablePdbWriterProvider(),
+            WriteSymbols = true
+        };
+
+        modder.Read();
+        modder.ReadMod(Path.Combine(basePath, "FEZ.HAT.mm.dll"));
+        modder.ReadMod(Path.Combine(basePath, "FEZ.Hooks.mm.dll"));
+        modder.MapDependencies();
+        modder.AutoPatch();
+        modder.Write();
+
+        return modder.OutputPath;
+    }
+
+    private static DefaultAssemblyResolver BuildResolver(string path)
+    {
+        var resolver = new DefaultAssemblyResolver();
+        resolver.AddSearchDirectory(path);
+        resolver.AddSearchDirectory(Path.Combine(path, "HATDependencies", "MonoMod"));
+        resolver.AddSearchDirectory(Path.Combine(path, "HATDependencies", "FEZRepacker.Core"));
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            // .NET Framework install - registry tells us where
+            var netFxRoot = (string)Registry.GetValue(
+                @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\.NETFramework",
+                "InstallRoot", ""
+            )!;
+
+            if (string.IsNullOrEmpty(netFxRoot))
+            {
+                netFxRoot = Directory.EnumerateDirectories(path, "v4.*")
+                    .OrderByDescending(d => d)
+                    .FirstOrDefault();
+            }
+
+            if (!string.IsNullOrEmpty(netFxRoot))
+            {
+                var installFolder = Directory.EnumerateDirectories(netFxRoot, "v4.*")
+                    .OrderByDescending(d => d)
+                    .FirstOrDefault();
+                resolver.AddSearchDirectory(installFolder);
+            }
+        }
+        else
+        {
+            // Prefer 4.8-api, fall back to any 4.x directory
+            var monoApiDir = Directory.EnumerateDirectories(MonoRoot, "4.8*")
+                                 .FirstOrDefault()
+                             ?? Directory.EnumerateDirectories(MonoRoot, "4.*")
+                                 .OrderByDescending(d => d)
+                                 .FirstOrDefault()
+                             ?? throw new InstallerException(
+                                 "System Mono 4.x not found. Install `mono` or similar package using your package manager.");
+
+            resolver.AddSearchDirectory(monoApiDir);
+
+            // Copy netstandard.dll from system Mono so FEZRepacker can load it at runtime
+            var netstandardSrc = Directory.EnumerateFiles(MonoRoot, "netstandard.dll", SearchOption.AllDirectories)
+                                     .OrderByDescending(f => f.Contains("4.8") ? 1 : 0)
+                                     .FirstOrDefault()
+                                 ?? throw new InstallerException(
+                                     "netstandard.dll not found in system Mono. Install `mono` or similar package using your package manager.");
+
+            File.Copy(netstandardSrc, Path.Combine(path, "netstandard.dll"), overwrite: true);
+        }
+
+        return resolver;
+    }
+
+    private static void ReplaceExecutableIcon(string path)
+    {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            return;
+        }
+
+        Console.WriteLine("[HAT] Patching executable icon");
+
+        using var stream = GetResource("HAT.ico");
+        var iconData = new byte[stream.Length];
+        stream.ReadExactly(iconData);
+
+        // Parse ISO directory entry (first entry at offset 6)
+        const int entryOffset = 6;
+        var width = iconData[entryOffset];
+        var height = iconData[entryOffset + 1];
+        var colorCount = iconData[entryOffset + 2];
+        var planes = (ushort)BitConverter.ToInt16(iconData, entryOffset + 4);
+        var bpp = (ushort)BitConverter.ToInt16(iconData, entryOffset + 6);
+        var imageSize = BitConverter.ToInt32(iconData, entryOffset + 8);
+        var imageOffset = BitConverter.ToInt32(iconData, entryOffset + 12);
+        var pixelData = iconData.Skip(imageOffset).Take(imageSize).ToArray();
+
+        var image = PEImage.FromFile(path);
+        var iconResource = IconResource.FromDirectory(image.Resources!, IconType.Icon);
+
+        var group = iconResource!.Groups.First();
+        var entry = group.Icons.OrderByDescending(i => i.Width).First();
+        entry.PixelData = new DataSegment(pixelData);
+        entry.Width = width == 0 ? (byte)255 : width; // 0 in ICO = 256, but byte max is 255
+        entry.Height = height == 0 ? (byte)255 : height;
+        entry.ColorCount = colorCount;
+        entry.Planes = planes;
+        entry.BitsPerPixel = bpp;
+
+        iconResource.InsertIntoDirectory(image.Resources!);
+
+        var tempPath = path + ".tmp";
+        var builder = new ManagedPEFileBuilder();
+        builder.CreateFile(image).Write(tempPath);
+        File.Move(tempPath, path, overwrite: true);
+    }
+
+    private static void PostInstallationSetup(string path)
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            return;
+        }
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            Console.WriteLine("Done! Run HAT.exe to launch the modded game.");
+            return;
+        }
+
+        // Copy the monokickstart binaries so that /proc/self/exe resolves to
+        // HAT.bin.*, causing the embedded Mono runtime to load HAT.exe instead of FEZ.exe
+        Console.WriteLine("[HAT] Copying MonoKickstart");
+        var basePath2 = Path.GetDirectoryName(path)!;
+        var kickstartBinaries = new Dictionary<string, string>
+        {
+            ["FEZ.bin.x86"] = "HAT.bin.x86",
+            ["FEZ.bin.x86_64"] = "HAT.bin.x86_64",
+            ["FEZ.bin.osx"] = "HAT.bin.osx"
+        };
+
+        foreach (var (src, dst) in kickstartBinaries)
+        {
+            var srcPath = Path.Combine(basePath2, src);
+            if (File.Exists(srcPath))
+            {
+                File.Copy(srcPath, Path.Combine(basePath2, dst), overwrite: true);
+            }
+        }
+
+        // Copy launch script mirroring the original FEZ script
+        Console.WriteLine("[HAT] Creating launch script");
+        var script = path.Replace(HatExecutable, "HAT.sh");
+        using (var stream = GetResource("HAT.sh"))
+        {
+            using (var file = File.Create(script))
+            {
+                stream.CopyTo(file);
+            }
+        }
+
+        // chmod +x
+        File.SetUnixFileMode(script,
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+            UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
+            UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+
+        Console.WriteLine("Done! Run ./HAT to launch the modded game.");
+    }
+
+    private static void CreateModsFolder(string path)
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            return;
+        }
+
+        Console.WriteLine("[HAT] Creating \"Mods\" folder");
+        var basePath = Path.GetDirectoryName(path)!;
+
+        var modsFolder = Path.Combine(basePath, "Mods");
+        if (!Directory.Exists(modsFolder))
+        {
+            Directory.CreateDirectory(modsFolder);
+        }
+
+        var ignoredModsFile = Path.Combine(modsFolder, "ignorelist.txt");
+        if (!File.Exists(ignoredModsFile))
+        {
+            using var stream = File.Create(ignoredModsFile);
+            using var writer = new StreamWriter(stream);
+            writer.WriteLine("# List of directories and zip archives to ignore when loading mods, one per line.");
+            writer.WriteLine("# Lines starting with # will be ignored.");
+            writer.WriteLine();
+            writer.WriteLine("ExampleDirectoryModName");
+            writer.WriteLine("ExampleZipPackageName.zip");
+        }
+
+        var priorityList = Path.Combine(basePath, "prioritylist.txt");
+        if (!File.Exists(priorityList))
+        {
+            using var stream = File.Create(priorityList);
+            using var writer = new StreamWriter(stream);
+            writer.WriteLine("# List of directories and zip archives to prioritize during mod loading.");
+            writer.WriteLine("# If present on this list, the mod will be loaded before other mods not listed here or listed below it,");
+            writer.WriteLine("# including newer versions of the same mod. However, it does not override dependency ordering.");
+            writer.WriteLine("# Lines starting with # will be ignored.");
+            writer.WriteLine();
+            writer.WriteLine("ExampleDirectoryModName");
+            writer.WriteLine("ExampleZipPackageName.zip");
+        }
+    }
+
+    private static void WaitForUserInput()
+    {
+        if (!Console.IsInputRedirected)
+        {
+            Console.WriteLine("Press Enter key to exit...");
+            ConsoleKeyInfo keyInfo;
+            do
+            {
+                keyInfo = Console.ReadKey(intercept: true);
+            } while (keyInfo.Key != ConsoleKey.Enter);
+        }
+    }
+
+    private static Stream GetResource(string resource)
+    {
+        return Assembly.GetExecutingAssembly().GetManifestResourceStream(resource)
+               ?? throw new InstallerException("HAT binaries not found in installer - rebuild the solution.");
+    }
+}
+
+internal class InstallerException : Exception
+{
+    public InstallerException(string message) : base(message)
+    {
+    }
+}

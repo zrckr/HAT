@@ -5,6 +5,8 @@ VisualStudioVersion = 17.1.32407.343
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FEZ.HAT.mm", "FEZ.HAT.mm.csproj", "{6F13616E-70E1-4FE0-AAC3-FDECCB9D8229}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FEZ.HAT.cli", "Cli\FEZ.HAT.cli.csproj", "{22A794B7-EC93-42B4-8A0A-1CC439D45CC5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
@@ -15,6 +17,10 @@ Global
 		{6F13616E-70E1-4FE0-AAC3-FDECCB9D8229}.Debug|x86.Build.0 = Debug|Any CPU
 		{6F13616E-70E1-4FE0-AAC3-FDECCB9D8229}.Release|x86.ActiveCfg = Release|Any CPU
 		{6F13616E-70E1-4FE0-AAC3-FDECCB9D8229}.Release|x86.Build.0 = Release|Any CPU
+		{22A794B7-EC93-42B4-8A0A-1CC439D45CC5}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{22A794B7-EC93-42B4-8A0A-1CC439D45CC5}.Debug|x86.Build.0 = Debug|Any CPU
+		{22A794B7-EC93-42B4-8A0A-1CC439D45CC5}.Release|x86.ActiveCfg = Release|Any CPU
+		{22A794B7-EC93-42B4-8A0A-1CC439D45CC5}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

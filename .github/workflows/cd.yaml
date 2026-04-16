@@ -3,46 +3,52 @@ name: CD
 on:
   push:
     tags:
-    - '*'
+      - '*'
 
 jobs:
   build:
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+            artifact: HATinstaller-win-x64.exe
+          - os: ubuntu-latest
+            rid: linux-x64
+            artifact: HATinstaller-linux-x64
+          - os: macos-latest
+            rid: osx-x64
+            artifact: HATinstaller-osx-x64
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.x'
 
-      - name: Restore packages
-        run: dotnet restore FEZ.HAT.mm.csproj
+      - name: Publish installer
+        run: dotnet publish Cli/FEZ.HAT.cli.csproj -c Release -r ${{ matrix.rid }}
 
-      - name: Build
-        run: dotnet build FEZ.HAT.mm.csproj -c Release
-
-      - name: Prepare artifact
-        shell: pwsh
+      - name: Rename artifact
+        shell: bash
         run: |
-          New-Item -Path artifact -ItemType Directory -Force
-          Copy-Item -Path 'bin/Release/*' -Destination artifact -Recurse
-          Copy-Item -Path 'scripts/*' -Destination artifact -Recurse
-          Compress-Archive -Path artifact/* -DestinationPath HAT.zip
+          src=$(find Cli/bin/Release -name 'HATinstaller' -o -name 'HATinstaller.exe' | head -1)
+          mv "$src" "${{ matrix.artifact }}"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: HAT
-          path: HAT.zip
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}
           if-no-files-found: error
+
   release:
     if: github.repository == 'FEZModding/HAT'
-    needs: [build]
+    needs: [ build ]
     runs-on: ubuntu-latest
     steps:
-      - name: Download Build
+      - name: Download installers
         uses: actions/download-artifact@v4
-        with:
-          name: HAT
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -50,12 +56,21 @@ jobs:
           body: |
             ## Installation
 
-            1. Download `HAT.zip` from Release tab and unpack it in the game's directory (next to FEZ.exe).
-            2. Run `hat_install.bat` (for Windows) or `hat_install.sh` (for Linux, experimental!). This should generate new executable file called `MONOMODDED_FEZ.exe`.
-            3. Run `MONOMODDED_FEZ.exe` and enjoy modding!
+            Download the installer for your platform and run it.
 
-            ## Changelog
+            | Platform | File |
+            |----------|------|
+            | Windows  | `HATinstaller-win-x64.exe` |
+            | Linux    | `HATinstaller-linux-x64` |
+            | macOS    | `HATinstaller-osx-x64` |
 
-            TODO
-          files: HAT.zip
+            FEZ will be detected automatically from your Steam or GOG library.
+            If detection fails, drop the installer into your FEZ game folder
+            and run it from there, or use `--path <dir>`.
+          
+          files: |
+            HATinstaller-win-x64.exe/HATinstaller-win-x64.exe
+            HATinstaller-linux-x64/HATinstaller-linux-x64
+            HATinstaller-osx-x64/HATinstaller-osx-x64
+          
           fail_on_unmatched_files: true

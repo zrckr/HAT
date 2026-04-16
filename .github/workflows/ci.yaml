@@ -36,7 +36,6 @@ jobs:
         run: |
           New-Item -Path artifact -ItemType Directory -Force
           Copy-Item -Path 'bin/Debug/*' -Destination artifact -Recurse
-          Copy-Item -Path 'scripts/*' -Destination artifact -Recurse
           Compress-Archive -Path artifact/ -DestinationPath HAT.zip
 
       - name: Upload artifact
