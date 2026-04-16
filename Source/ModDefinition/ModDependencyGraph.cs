@@ -31,7 +31,7 @@ namespace HatModLoader.Source.ModDefinition
         {
             public ModContainer Mod { get; }
             
-            public List<Node> Dependencies { get; } = [];
+            public List<Node> Dependencies { get; } = new();
             
             public ModDependencyStatus Status { get; private set; } = ModDependencyStatus.Valid;
 

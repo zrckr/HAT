@@ -20,7 +20,7 @@ namespace HatModLoader.Source
 
         private static readonly IList<string> PriorityModNames = InitializePriorityList();
 
-        public List<ModContainer> Mods { get; private set; }
+        public List<ModContainer> Mods { get; } = new();
 
         public int InvalidModsCount { get; private set; }
 
@@ -84,7 +84,7 @@ namespace HatModLoader.Source
             proxies = new IEnumerable<IFileProxy>[]
                 {
                     DirectoryFileProxy.EnumerateInDirectory(ModsDirectory),
-                    ZipFileProxy.EnumerateInDirectory(ModsDirectory),
+                    ZipFileProxy.EnumerateInDirectory(ModsDirectory)
                 }
                 .SelectMany(x => x);
 
@@ -120,7 +120,7 @@ namespace HatModLoader.Source
         private void ResolveDependencies(IList<ModContainer> mods)
         {
             var resolverResult = ModDependencyResolver.Resolve(mods, PriorityModNames);
-            Mods = resolverResult.LoadOrder;
+            Mods.AddRange(resolverResult.LoadOrder);
             InvalidModsCount = resolverResult.Invalid.Count;
             
             foreach (var node in resolverResult.Invalid)
@@ -179,14 +179,28 @@ namespace HatModLoader.Source
     
         public IEnumerable<Asset> GetFullAssetList()
         {
-            return Mods.SelectMany(mc => mc.GetAssets());
+            var assets = new List<Asset>();
+            foreach (var mod in Mods)
+            {
+                assets.AddRange(mod.GetAssets());
+            }
+
+            return assets;
         }
 
         public void OnGameActivated()
         {
-            var changedAssets = Mods.SelectMany(mc => mc.ReloadAssets())
-                .Where(a => a.Extension != ".fxc")
-                .ToList();
+            var changedAssets = new List<Asset>();
+            foreach (var mod in Mods)
+            {
+                foreach (var asset in mod.ReloadAssets())
+                {
+                    if (!asset.Extension.Equals(".fxc", StringComparison.OrdinalIgnoreCase))
+                    {
+                        changedAssets.Add(asset);
+                    }
+                }
+            }
             
             if (changedAssets.Count < 1)
             {

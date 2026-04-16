@@ -13,7 +13,7 @@ namespace HatModLoader.Source.ModDefinition
 
         public Assembly Assembly { get; private set; }
 
-        public List<GameComponent> Components { get; private set; }
+        public List<GameComponent> Components { get; } = new();
 
         private CodeMod(byte[] rawAssembly)
         {
@@ -33,7 +33,7 @@ namespace HatModLoader.Source.ModDefinition
             }
             
             Assembly = Assembly.Load(RawAssembly);
-            Components = [];
+            Components.Clear();
 
             Type[] types;
             if (!string.IsNullOrEmpty(entrypoint))
@@ -45,7 +45,7 @@ namespace HatModLoader.Source.ModDefinition
                 
                 // Entrypoint class may load other components (services) via Game.Components (Game.Services)
                 Logger.Log("HAT", LogSeverity.Information, $"Starting at entrypoint {entrypoint}.");
-                types = [Assembly.GetType(entrypoint)];
+                types = new [] { Assembly.GetType(entrypoint) };
             }
             else
             {
@@ -58,8 +58,8 @@ namespace HatModLoader.Source.ModDefinition
             {
                 if (typeof(GameComponent).IsAssignableFrom(type) && type.IsPublic && !type.IsAbstract)
                 {
-                    // NOTE: The constructor accepting the type (Game) is defined in GameComponent
-                    var gameComponent = (GameComponent)Activator.CreateInstance(type, [game]);
+                    // The constructor accepting the type (Game) is defined in GameComponent
+                    var gameComponent = (GameComponent)Activator.CreateInstance(type, game);
                     Components.Add(gameComponent);
                 }
             }

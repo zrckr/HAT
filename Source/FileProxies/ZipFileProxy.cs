@@ -8,7 +8,7 @@ namespace HatModLoader.Source.FileProxies
         private ZipArchive _archive;
         private readonly string _zipPath;
         private DateTime _zipLastModified;
-        private readonly Dictionary<IntPtr, string> _tempFiles = []; 
+        private readonly Dictionary<IntPtr, string> _tempFiles = new(); 
 
         public string RootPath => _zipPath;
         public string ContainerName => Path.GetFileName(_zipPath);

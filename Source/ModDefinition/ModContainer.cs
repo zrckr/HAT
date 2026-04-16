@@ -42,7 +42,7 @@ public class ModContainer : IDisposable
 
     public void InjectComponents()
     {
-        foreach (var component in CodeMod?.Components ?? [])
+        foreach (var component in CodeMod?.Components ?? new List<GameComponent>())
         {
             ServiceHelper.AddComponent(component);
         }
@@ -50,7 +50,7 @@ public class ModContainer : IDisposable
 
     public IEnumerable<Asset> GetAssets()
     {
-        return AssetMod?.Assets ?? [];
+        return AssetMod?.Assets ?? new List<Asset>();
     }
 
     public IEnumerable<Asset> ReloadAssets()
@@ -60,7 +60,7 @@ public class ModContainer : IDisposable
         {
             if (!AssetMod.TryLoad(FileProxy, out var assetMod))
             {
-                return [];
+                return new List<Asset>();
             }
 
             AssetMod = assetMod;
@@ -72,7 +72,7 @@ public class ModContainer : IDisposable
 
     public void Dispose()
     {
-        foreach (var component in CodeMod?.Components ?? [])
+        foreach (var component in CodeMod?.Components ?? new List<GameComponent>())
         {
             ServiceHelper.RemoveComponent(component);
         }
