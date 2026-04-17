@@ -397,7 +397,7 @@ public static class Program
 
         // Copy launch script mirroring the original FEZ script
         Console.WriteLine("[HAT] Creating launch script");
-        var script = path.Replace(HatExecutable, "HAT.sh");
+        var script = path.Replace(HatExecutable, "HAT");
         using (var stream = GetResource("HAT.sh"))
         {
             using (var file = File.Create(script))
