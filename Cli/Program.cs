@@ -87,6 +87,7 @@ public static class Program
         }
 
         Console.WriteLine(); // separator
+        Thread.Sleep(2000);
     }
 
     private static bool TryFindFezExecutable(string[] args, out string executable)
