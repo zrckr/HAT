@@ -31,7 +31,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\FEZ.HAT.mm.csproj"/>
+    <ProjectReference Include="..\Plugin\FEZ.HAT.mm.csproj"/>
   </ItemGroup>
 
   <Target Name="BundleHatMod" AfterTargets="ResolveProjectReferences">
