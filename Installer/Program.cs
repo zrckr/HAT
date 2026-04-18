@@ -72,6 +72,7 @@ public static class Program
 
         Console.WriteLine($"HAT Installer v{version}".PadLeft(logoWidth));
         Console.WriteLine("Created by zerocker and FEZModding community".PadLeft(logoWidth));
+        Console.WriteLine("HAT ASCII logo by Krzyhau".PadLeft(logoWidth));
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
@@ -87,7 +88,9 @@ public static class Program
         }
 
         Console.WriteLine(); // separator
-        Thread.Sleep(2000);
+        Console.WriteLine("Press Enter to proceed with installation");
+        Console.Write("or press Ctrl+C to abort it...");
+        Console.ReadLine();
     }
 
     private static bool TryFindFezExecutable(string[] args, out string executable)
@@ -462,12 +465,8 @@ public static class Program
     {
         if (!Console.IsInputRedirected)
         {
-            Console.WriteLine("Press Enter key to exit...");
-            ConsoleKeyInfo keyInfo;
-            do
-            {
-                keyInfo = Console.ReadKey(intercept: true);
-            } while (keyInfo.Key != ConsoleKey.Enter);
+            Console.Write("Press Enter to exit...");
+            Console.ReadLine();
         }
     }
 
