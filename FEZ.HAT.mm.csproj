@@ -92,14 +92,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="Cli\**" />
+    <Compile Remove="Installer\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Remove="Cli\**" />
+    <EmbeddedResource Remove="Installer\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="Cli\**" />
+    <None Remove="Installer\**" />
   </ItemGroup>
 </Project>
