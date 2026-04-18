@@ -24,11 +24,7 @@
 
   <!-- Build operations -->
 
-  <Target Name="VerifyModReferences" BeforeTargets="BeforeBuild">
-    <Error Text="You forgot to edit UserProperties.xml." Condition="$(UserPropertiesNotSetUp) == True" />
-  </Target>
-  
-  <Target Name="CleanUpHooksLibrary" BeforeTargets="Clean">
+<Target Name="CleanUpHooksLibrary" BeforeTargets="Clean">
     <Delete Files="$(TargetDir)FEZ.Hooks.mm.dll" />
   </Target>
 
