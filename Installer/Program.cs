@@ -88,9 +88,11 @@ public static class Program
         }
 
         Console.WriteLine(); // separator
+#if !DEBUG
         Console.WriteLine("Press Enter to proceed with installation");
         Console.Write("or press Ctrl+C to abort it...");
         Console.ReadLine();
+#endif
     }
 
     private static bool TryFindFezExecutable(string[] args, out string executable)
@@ -463,11 +465,13 @@ public static class Program
 
     private static void WaitForUserInput()
     {
+#if !DEBUG
         if (!Console.IsInputRedirected)
         {
             Console.Write("Press Enter to exit...");
             Console.ReadLine();
         }
+#endif
     }
 
     private static Stream GetResource(string resource)
