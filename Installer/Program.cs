@@ -26,7 +26,6 @@ public static class Program
         PrintHeader();
         try
         {
-            CheckPlatformRequirements();
             if (TryFindFezExecutable(args, out var fezPath))
             {
                 ExtractHatDependencies(fezPath);
@@ -47,18 +46,6 @@ public static class Program
         }
 
         WaitForUserInput();
-    }
-
-    private static void CheckPlatformRequirements()
-    {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            if (!Directory.Exists(MonoRoot))
-            {
-                throw new InstallerException(
-                    "System Mono not found. Install `mono` or similar package using your package manager.");
-            }
-        }
     }
 
     private static void PrintHeader()
@@ -270,10 +257,6 @@ public static class Program
     private static DefaultAssemblyResolver BuildResolver(string path)
     {
         var resolver = new DefaultAssemblyResolver();
-        resolver.AddSearchDirectory(path);
-        resolver.AddSearchDirectory(Path.Combine(path, "HATDependencies", "MonoMod"));
-        resolver.AddSearchDirectory(Path.Combine(path, "HATDependencies", "FEZRepacker.Core"));
-
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             // .NET Framework install - registry tells us where
@@ -300,25 +283,37 @@ public static class Program
         else
         {
             // Prefer 4.8-api, fall back to any 4.x directory
-            var monoApiDir = Directory.EnumerateDirectories(MonoRoot, "4.8*")
-                                 .FirstOrDefault()
-                             ?? Directory.EnumerateDirectories(MonoRoot, "4.*")
-                                 .OrderByDescending(d => d)
-                                 .FirstOrDefault()
-                             ?? throw new InstallerException(
-                                 "System Mono 4.x not found. Install `mono` or similar package using your package manager.");
-
-            resolver.AddSearchDirectory(monoApiDir);
-
-            // Copy netstandard.dll from system Mono so FEZRepacker can load it at runtime
-            var netstandardSrc = Directory.EnumerateFiles(MonoRoot, "netstandard.dll", SearchOption.AllDirectories)
-                                     .OrderByDescending(f => f.Contains("4.8") ? 1 : 0)
-                                     .FirstOrDefault()
-                                 ?? throw new InstallerException(
-                                     "netstandard.dll not found in system Mono. Install `mono` or similar package using your package manager.");
-
-            File.Copy(netstandardSrc, Path.Combine(path, "netstandard.dll"), overwrite: true);
+            var monoPath = Directory.Exists(MonoRoot)
+                ? Directory.EnumerateDirectories(MonoRoot, "4.*")
+                      .OrderByDescending(d => d)
+                      .FirstOrDefault()
+                : null;
+            
+            if (!string.IsNullOrEmpty(monoPath))
+            {
+                Console.WriteLine($"[HAT] Using system Mono for patching: {monoPath}");
+                resolver.AddSearchDirectory(monoPath);
+                var netstandard = Path.Combine(monoPath, "Facades", "netstandard.dll");
+                if (File.Exists(netstandard))
+                {
+                    // Copy netstandard.dll from the resolved 4.x api dir so FEZRepacker can load it at runtime
+                    File.Copy(netstandard, Path.Combine(path, "netstandard.dll"), overwrite: true);
+                }
+            }
+            else
+            {
+                Console.WriteLine("[HAT] System Mono not found, falling back to MonoKickstart libraries");
+                resolver.AddSearchDirectory(path);
+                var netstandard = Path.Combine(path, "netstandard.dll");
+                if (!File.Exists(netstandard))
+                {
+                    throw new InstallerException("Please supplement netstandard.dll one from mono package.");
+                }
+            }
         }
+
+        resolver.AddSearchDirectory(Path.Combine(path, "HATDependencies", "MonoMod"));
+        resolver.AddSearchDirectory(Path.Combine(path, "HATDependencies", "FEZRepacker.Core"));
 
         return resolver;
     }
