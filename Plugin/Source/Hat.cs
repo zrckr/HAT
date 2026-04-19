@@ -50,33 +50,18 @@ namespace HatModLoader.Source
         private void Initialize()
         {
             Logger.Log("HAT", $"HAT Mod Loader {VersionString}");
-            
-            if (CheckModsFolder())
+
+            if (GetModProxies(out var proxies))
             {
-                if (GetModProxies(out var proxies))
+                if (GetModList(proxies, out var mods))
                 {
-                    if (GetModList(proxies, out var mods))
-                    {
-                        ResolveDependencies(mods);
-                        LoadMods();
-                        return;     // HAT initialized
-                    }
+                    ResolveDependencies(mods);
+                    LoadMods();
+                    return; // HAT initialized
                 }
             }
             
             Logger.Log("HAT", LogSeverity.Warning, "Skip the initialization process...");
-        }
-
-        private static bool CheckModsFolder()
-        {
-            if (!Directory.Exists(ModsDirectory))
-            {
-                Logger.Log("HAT", LogSeverity.Warning,"'Mods' directory not found. Creating it...");
-                Directory.CreateDirectory(ModsDirectory);
-                return false;
-            }
-
-            return true;
         }
 
         private static bool GetModProxies(out IEnumerable<IFileProxy> proxies)
@@ -247,25 +232,63 @@ namespace HatModLoader.Source
 
         private static IList<string> InitializeIgnoredModsList()
         {
-            var ignoredModsNamesFilePath = Path.Combine(ModsDirectory, "ignorelist.txt");
             const string defaultContent =
                 "# List of directories and zip archives to ignore when loading mods, one per line.\n" +
                 "# Lines starting with # will be ignored.\n\n" +
                 "ExampleDirectoryModName\n" +
                 "ExampleZipPackageName.zip\n";
-            return ModsTextListLoader.LoadOrCreateDefault(ignoredModsNamesFilePath, defaultContent);
+            return LoadModsTextList("ignorelist.txt", defaultContent);
         }
 
         private static IList<string> InitializePriorityList()
         {
-            var priorityListFilePath = Path.Combine(ModsDirectory, "prioritylist.txt");
             const string defaultContent = "# List of directories and zip archives to prioritize during mod loading.\n" +
                                           "# If present on this list, the mod will be loaded before other mods not listed here or listed below it,\n" +
                                           "# including newer versions of the same mod. However, it does not override dependency ordering.\n" +
                                           "# Lines starting with # will be ignored.\n\n" +
                                           "ExampleDirectoryModName\n" +
                                           "ExampleZipPackageName.zip\n";
-            return ModsTextListLoader.LoadOrCreateDefault(priorityListFilePath, defaultContent);
+            return LoadModsTextList("prioritylist.txt", defaultContent);
+        }
+
+        private static IList<string> LoadModsTextList(string path, string defaultContent)
+        {
+            if (!Directory.Exists(ModsDirectory))
+            {
+                Logger.Log("HAT", LogSeverity.Warning, "'Mods' directory not found. Creating it...");
+                Directory.CreateDirectory(ModsDirectory);
+            }
+
+            var fullPath = Path.Combine(ModsDirectory, path);
+            if (!File.Exists(fullPath))
+            {
+                File.WriteAllText(fullPath, defaultContent);
+                return new List<string>();
+            }
+
+            var modsList = new List<string>();
+            var contents = File.ReadAllText(fullPath);
+
+            foreach (var line in contents.Split('\n'))
+            {
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    continue;
+                }
+
+                var clearedLine = line.Trim();
+                if (clearedLine.StartsWith("#"))
+                {
+                    continue;
+                }
+
+                if (clearedLine.Length > 0)
+                {
+                    modsList.Add(clearedLine);
+                }
+            }
+
+            return modsList;
         }
     }
 }

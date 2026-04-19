@@ -31,7 +31,6 @@ public static class Program
                 ExtractHatDependencies(fezPath);
                 var hatPath = PatchExecutable(fezPath);
                 ReplaceExecutableIcon(hatPath);
-                CreateModsFolder(hatPath);
                 PostInstallationSetup(hatPath);
             }
         }
@@ -413,49 +412,6 @@ public static class Program
             UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
 
         Console.WriteLine("Done! Run ./HAT to launch the modded game.");
-    }
-
-    private static void CreateModsFolder(string path)
-    {
-        if (string.IsNullOrEmpty(path))
-        {
-            return;
-        }
-
-        Console.WriteLine("[HAT] Creating \"Mods\" folder");
-        var basePath = Path.GetDirectoryName(path)!;
-
-        var modsFolder = Path.Combine(basePath, "Mods");
-        if (!Directory.Exists(modsFolder))
-        {
-            Directory.CreateDirectory(modsFolder);
-        }
-
-        var ignoredModsFile = Path.Combine(modsFolder, "ignorelist.txt");
-        if (!File.Exists(ignoredModsFile))
-        {
-            using var stream = File.Create(ignoredModsFile);
-            using var writer = new StreamWriter(stream);
-            writer.WriteLine("# List of directories and zip archives to ignore when loading mods, one per line.");
-            writer.WriteLine("# Lines starting with # will be ignored.");
-            writer.WriteLine();
-            writer.WriteLine("ExampleDirectoryModName");
-            writer.WriteLine("ExampleZipPackageName.zip");
-        }
-
-        var priorityList = Path.Combine(basePath, "prioritylist.txt");
-        if (!File.Exists(priorityList))
-        {
-            using var stream = File.Create(priorityList);
-            using var writer = new StreamWriter(stream);
-            writer.WriteLine("# List of directories and zip archives to prioritize during mod loading.");
-            writer.WriteLine("# If present on this list, the mod will be loaded before other mods not listed here or listed below it,");
-            writer.WriteLine("# including newer versions of the same mod. However, it does not override dependency ordering.");
-            writer.WriteLine("# Lines starting with # will be ignored.");
-            writer.WriteLine();
-            writer.WriteLine("ExampleDirectoryModName");
-            writer.WriteLine("ExampleZipPackageName.zip");
-        }
     }
 
     private static void WaitForUserInput()
