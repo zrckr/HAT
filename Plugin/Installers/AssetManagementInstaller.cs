@@ -1,10 +1,12 @@
-﻿using Common;
+using Common;
 using FezEngine.Effects.Structures;
 using FezEngine.Services;
+using FezEngine.Structure;
 using FezEngine.Tools;
 using HatModLoader.Source;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Audio;
 using MonoMod.RuntimeDetour;
 using System.Reflection;
 using HatModLoader.Source.Assets;
@@ -21,6 +23,7 @@ namespace HatModLoader.Installers
         private static FieldInfo ReadLockField;
         private static FieldInfo CommonField;
         private static FieldInfo ReferencesField;
+        private static FieldInfo AssetField;
 
         private static readonly Dictionary<string, byte[]> OriginalAssets = new();
         private static readonly Dictionary<string, byte[]> OriginalMusic = new();
@@ -37,7 +40,11 @@ namespace HatModLoader.Installers
                 .GetField("Common", BindingFlags.NonPublic | BindingFlags.Static);
             ReferencesField = CommonField!.FieldType
                 .GetField("references", BindingFlags.NonPublic | BindingFlags.Instance);
-            
+            var referencedAssetType = CommonField.FieldType
+                .GetNestedType("ReferencedAsset", BindingFlags.NonPublic);
+            AssetField = referencedAssetType!
+                .GetField("Asset", BindingFlags.Public | BindingFlags.Instance);
+
             CMProviderCtorDetour = new Hook(
                 typeof(ContentManagerProvider).GetConstructor(BindingFlags.Instance | BindingFlags.Public, null,
                     CallingConventions.HasThis, new Type[] { typeof(Game) }, null),
@@ -160,15 +167,13 @@ namespace HatModLoader.Installers
             var references = (System.Collections.IDictionary)ReferencesField.GetValue(common);
             lock (common)
             {
-                if (!references.Contains(assetPath))
+                var key = FindReferencesKey(references, assetPath);
+                if (key == null)
                 {
                     return;
                 }
 
-                var entry = references[assetPath];
-                var assetField = entry.GetType().GetField("Asset", BindingFlags.Public | BindingFlags.Instance);
-
-                var asset = assetField?.GetValue(entry);
+                var asset = AssetField.GetValue(references[key]);
                 if (asset is Texture texture)
                 {
                     texture.Unhook();
@@ -179,8 +184,133 @@ namespace HatModLoader.Installers
                     disposable.Dispose();
                 }
 
-                references.Remove(assetPath);
+                references.Remove(key);
             }
+        }
+
+        internal static void PatchInCommon(string assetPath)
+        {
+            var common = CommonField.GetValue(null);
+            var references = (System.Collections.IDictionary)ReferencesField.GetValue(common);
+            lock (common)
+            {
+                var key = FindReferencesKey(references, assetPath);
+                if (key == null)
+                {
+                    return;
+                }
+
+                var entry = references[key];
+                var existing = AssetField.GetValue(entry);
+
+                var mcm = new MemoryContentManager(ServiceHelper.Game.Services,
+                    ServiceHelper.Game.Content.RootDirectory);
+
+                switch (existing)
+                {
+                    case AnimatedTexture existingAt:
+                    {
+                        var tempAt = mcm.Load<AnimatedTexture>(assetPath);
+                        var inPlace = PatchTexture2D(existingAt.Texture, tempAt.Texture, out var replacement);
+                        if (!inPlace)
+                        {
+                            existingAt.Texture.Unhook();
+                            existingAt.Texture.Dispose();
+                            existingAt.Texture = replacement;
+                        }
+                        else
+                        {
+                            tempAt.Texture.Dispose();
+                        }
+
+                        existingAt.Offsets = tempAt.Offsets;
+                        existingAt.FrameWidth = tempAt.FrameWidth;
+                        existingAt.FrameHeight = tempAt.FrameHeight;
+                        existingAt.Timing = tempAt.Timing;
+                        existingAt.PotOffset = tempAt.PotOffset;
+                        return;
+                    }
+
+                    case Texture2D existingTex:
+                    {
+                        var tempTex = mcm.Load<Texture2D>(assetPath);
+                        var inPlace = PatchTexture2D(existingTex, tempTex, out var replacement);
+                        if (!inPlace)
+                        {
+                            existingTex.Unhook();
+                            existingTex.Dispose();
+                            AssetField.SetValue(entry, replacement);
+                        }
+                        else
+                        {
+                            tempTex.Dispose();
+                        }
+
+                        return;
+                    }
+
+                    case SoundEffect existingSfx:
+                    {
+                        var tempSfx = mcm.Load<SoundEffect>(assetPath);
+                        existingSfx.Dispose();
+                        AssetField.SetValue(entry, tempSfx);
+                        return;
+                    }
+
+                    default:
+                    {
+                        // Fall back to evict (already holding lock(common))
+                        if (existing is Texture texture)
+                        {
+                            texture.Unhook();
+                        }
+
+                        if (existing is IDisposable disposable)
+                        {
+                            disposable.Dispose();
+                        }
+
+                        references.Remove(key);
+                        return;
+                    }
+                }
+            }
+        }
+
+        private static string FindReferencesKey(System.Collections.IDictionary references, string assetPath)
+        {
+            foreach (System.Collections.DictionaryEntry kv in references)
+            {
+                if (string.Equals((string)kv.Key, assetPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    return (string)kv.Key;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool PatchTexture2D(Texture2D existing, Texture2D temp, out Texture2D replacement)
+        {
+            replacement = temp;
+            if (existing.Width != temp.Width || existing.Height != temp.Height ||
+                existing.Format != temp.Format || existing.LevelCount != temp.LevelCount)
+            {
+                return false;
+            }
+
+            const int bytesPerPixel = 4; // All FEZ textures are SurfaceFormat.Color
+            for (var level = 0; level < existing.LevelCount; level++)
+            {
+                var w = Math.Max(existing.Width >> level, 1);
+                var h = Math.Max(existing.Height >> level, 1);
+                var size = w * h * bytesPerPixel;
+                var buf = new byte[size];
+                temp.GetData(level, null, buf, 0, size);
+                existing.SetData(level, null, buf, 0, size);
+            }
+
+            return true;
         }
     }
 }

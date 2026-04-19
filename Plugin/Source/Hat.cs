@@ -212,15 +212,18 @@ namespace HatModLoader.Source
                 if (asset.IsRemoved)
                 {
                     AssetManagementInstaller.RemoveAsset(asset);
+                    if (!asset.IsMusicFile)
+                    {
+                        AssetManagementInstaller.EvictFromCommon(asset.AssetPath);
+                    }
                 }
                 else
                 {
                     AssetManagementInstaller.InjectAsset(asset);
-                }
-                
-                if (!asset.IsMusicFile)
-                {
-                    AssetManagementInstaller.EvictFromCommon(asset.AssetPath);
+                    if (!asset.IsMusicFile)
+                    {
+                        AssetManagementInstaller.PatchInCommon(asset.AssetPath);
+                    }
                 }
             }
 
