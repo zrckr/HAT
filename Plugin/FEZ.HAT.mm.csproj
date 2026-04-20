@@ -26,9 +26,11 @@
 
 <Target Name="CleanUpHooksLibrary" BeforeTargets="Clean">
     <Delete Files="$(TargetDir)FEZ.Hooks.mm.dll" />
+    <RemoveDir Directories="$(TargetDir)HATDependencies" />
   </Target>
 
   <Target Name="RearrangeDependencies" AfterTargets="Build">
+    <RemoveDir Directories="$(TargetDir)HATDependencies" />
     <ItemGroup>
       <MonoModDependencies Include="$(TargetDir)Mono*" />
     </ItemGroup>

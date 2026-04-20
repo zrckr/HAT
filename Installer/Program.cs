@@ -207,6 +207,13 @@ public static class Program
 
     private static void ExtractHatDependencies(string path)
     {
+        var hatDependenciesDir = Path.Combine(Path.GetDirectoryName(path)!, "HATDependencies");
+        if (Directory.Exists(hatDependenciesDir))
+        {
+            Console.WriteLine("[HAT] Clearing existing HATDependencies");
+            Directory.Delete(hatDependenciesDir, recursive: true);
+        }
+
         using var stream = GetResource("HAT.zip");
         using var zip = new ZipArchive(stream, ZipArchiveMode.Read);
 
