@@ -71,11 +71,12 @@ namespace HatModLoader.Source
                     DirectoryFileProxy.EnumerateInDirectory(ModsDirectory),
                     ZipFileProxy.EnumerateInDirectory(ModsDirectory)
                 }
-                .SelectMany(x => x);
+                .SelectMany(x => x)
+                .Where(fp => !IgnoredModNames.Contains(fp.ContainerName));
 
             if (!proxies.Any())
             {
-                Logger.Log("HAT", LogSeverity.Warning, "There are no mods inside 'Mods' directory.");
+                Logger.Log("HAT", LogSeverity.Warning, "There are no active mods inside 'Mods' directory.");
                 return false;
             }
 
@@ -85,7 +86,7 @@ namespace HatModLoader.Source
         private static bool GetModList(in IEnumerable<IFileProxy> proxies, out IList<ModContainer> mods)
         {
             mods = new List<ModContainer>();
-            foreach (var proxy in proxies.Where(fp => !IgnoredModNames.Contains(fp.ContainerName)))
+            foreach (var proxy in proxies)
             {
                 if (Metadata.TryLoad(proxy, out var metadata))
                 {
