@@ -1,14 +1,13 @@
-﻿using System.IO.Compression;
 using System.Reflection;
 
 namespace HatModLoader.Source.FileProxies
 {
     public class ZipFileProxy : IFileProxy
     {
-        private ZipArchive _archive;
+        private ZipReader _archive;
         private readonly string _zipPath;
         private DateTime _zipLastModified;
-        private readonly Dictionary<IntPtr, string> _tempFiles = new(); 
+        private readonly Dictionary<IntPtr, string> _tempFiles = new();
 
         public string RootPath => _zipPath;
         public string ContainerName => Path.GetFileName(_zipPath);
@@ -23,7 +22,7 @@ namespace HatModLoader.Source.FileProxies
         {
             _archive?.Dispose();
             _zipLastModified = File.GetLastWriteTimeUtc(_zipPath);
-            _archive = ZipFile.OpenRead(_zipPath);
+            _archive = new ZipReader(_zipPath);
         }
 
         public void Refresh()
@@ -40,21 +39,20 @@ namespace HatModLoader.Source.FileProxies
             if (!localPath.EndsWith("/")) localPath += "/";
 
             return _archive.Entries
-                .Where(e => e.FullName.StartsWith(localPath))
-                .Select(e => e.FullName);
+                .Where(e => !e.IsDirectory && e.Name.StartsWith(localPath))
+                .Select(e => e.Name);
         }
 
         public bool FileExists(string localPath)
         {
-            return _archive.Entries.Any(e => e.FullName == localPath);
+            return _archive.Entries.Any(e => !e.IsDirectory && e.Name == localPath);
         }
 
         public Stream OpenFile(string localPath)
         {
-            // Copy to MemoryStream so the caller owns the data independently of the archive
-            var entry = _archive.Entries.First(e => e.FullName == localPath);
+            var entry = GetEntry(localPath);
             var ms = new MemoryStream();
-            using var s = entry.Open();
+            using var s = _archive.OpenEntry(entry);
             s.CopyTo(ms);
             ms.Position = 0;
             return ms;
@@ -62,26 +60,27 @@ namespace HatModLoader.Source.FileProxies
 
         public DateTime GetLastModified(string localPath)
         {
-            return _archive.Entries.First(e => e.FullName == localPath).LastWriteTime.UtcDateTime;
+            return GetEntry(localPath).LastModified.ToUniversalTime();
         }
 
-        private ZipArchiveEntry GetEntry(string localPath)
+        private ZipReader.Entry GetEntry(string localPath)
         {
-            return _archive.Entries.FirstOrDefault(e => e.FullName == localPath);
+            return _archive.Entries.FirstOrDefault(e => !e.IsDirectory && e.Name == localPath);
         }
-        
+
         public IntPtr LoadLibrary(string localPath)
         {
             var tempFile = Path.GetTempFileName();
-            var entry = GetEntry(localPath);
-            entry.ExtractToFile(tempFile, true);
+            using (var fs = File.Create(tempFile))
+            using (var s = _archive.OpenEntry(GetEntry(localPath)))
+                s.CopyTo(fs);
 
             var handle = NativeLibraryInterop.Load(tempFile);
             if (handle != IntPtr.Zero)
             {
                 _tempFiles.Add(handle, tempFile);
             }
-            
+
             return handle;
         }
 
@@ -99,18 +98,19 @@ namespace HatModLoader.Source.FileProxies
         {
             var tempFile = Path.GetTempFileName();
             var result = true;
-            
+
             try
             {
-                var entry = GetEntry(localPath);
-                entry.ExtractToFile(tempFile, true);
+                using (var fs = File.Create(tempFile))
+                using (var s = _archive.OpenEntry(GetEntry(localPath)))
+                    s.CopyTo(fs);
                 AssemblyName.GetAssemblyName(tempFile);
             }
             catch (BadImageFormatException)
             {
                 result = false;     // Native library file
             }
-            
+
             File.Delete(tempFile);
             return result;
         }
