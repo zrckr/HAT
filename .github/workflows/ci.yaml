@@ -65,7 +65,7 @@ jobs:
         run: ${{ matrix.monoInstall }}
 
       - name: Publish installer
-        run: dotnet publish Installer/FEZ.HAT.cli.csproj -c Release -r ${{ matrix.rid }}
+        run: dotnet publish Installer/FEZ.HAT.Installer.csproj -c Release -r ${{ matrix.rid }}
 
       - name: Rename artifact
         shell: bash
