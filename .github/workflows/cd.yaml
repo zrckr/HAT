@@ -60,7 +60,7 @@ jobs:
       - name: Rename artifact
         shell: bash
         run: |
-          src=$(find Installer/bin/Release -name 'HATinstaller' -o -name 'HATinstaller.exe' | head -1)
+          src=$(find Installer/bin/Release -path '*/publish/HATinstaller' -o -path '*/publish/HATinstaller.exe' | head -1)
           mv "$src" "${{ matrix.artifact }}"
 
       - name: Upload artifact
