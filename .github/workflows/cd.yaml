@@ -27,12 +27,12 @@ jobs:
           dotnet-version: '9.x'
 
       - name: Publish installer
-        run: dotnet publish Cli/FEZ.HAT.cli.csproj -c Release -r ${{ matrix.rid }}
+        run: dotnet publish Installer/FEZ.HAT.cli.csproj -c Release -r ${{ matrix.rid }}
 
       - name: Rename artifact
         shell: bash
         run: |
-          src=$(find Cli/bin/Release -name 'HATinstaller' -o -name 'HATinstaller.exe' | head -1)
+          src=$(find Installer/bin/Release -name 'HATinstaller' -o -name 'HATinstaller.exe' | head -1)
           mv "$src" "${{ matrix.artifact }}"
 
       - name: Upload artifact
