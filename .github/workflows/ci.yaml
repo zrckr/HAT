@@ -48,9 +48,11 @@ jobs:
           - os: ubuntu-latest
             rid: linux-x64
             artifact: HATinstaller-linux-x64
+            monoInstall: sudo apt-get install -y mono-complete
           - os: macos-latest
             rid: osx-x64
             artifact: HATinstaller-osx-x64
+            monoInstall: brew install mono
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -59,8 +61,8 @@ jobs:
           dotnet-version: '9.0.x'
 
       - name: Install Mono
-        if: runner.os == 'Linux'
-        run: sudo apt-get install -y mono-complete
+        if: matrix.monoInstall
+        run: ${{ matrix.monoInstall }}
 
       - name: Publish installer
         run: dotnet publish Installer/FEZ.HAT.cli.csproj -c Release -r ${{ matrix.rid }}
