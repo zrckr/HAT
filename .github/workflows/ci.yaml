@@ -17,7 +17,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-plugin:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,15 +31,45 @@ jobs:
       - name: Build
         run: dotnet build Plugin/FEZ.HAT.mm.csproj -c Debug
 
-      - name: Prepare artifact
-        shell: pwsh
-        run: |
-          New-Item -Path artifact -ItemType Directory -Force
-          Copy-Item -Path 'Plugin/bin/Debug/*' -Destination artifact -Recurse
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: HAT
-          path: artifact/
+          path: Plugin/bin/Debug/
+          if-no-files-found: error
+
+  build-installer:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+            artifact: HATinstaller-win-x64.exe
+          - os: ubuntu-latest
+            rid: linux-x64
+            artifact: HATinstaller-linux-x64
+          - os: macos-latest
+            rid: osx-x64
+            artifact: HATinstaller-osx-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.x'
+
+      - name: Publish installer
+        run: dotnet publish Cli/FEZ.HAT.cli.csproj -c Release -r ${{ matrix.rid }}
+
+      - name: Rename artifact
+        shell: bash
+        run: |
+          src=$(find Cli/bin/Release -name 'HATinstaller' -o -name 'HATinstaller.exe' | head -1)
+          mv "$src" "${{ matrix.artifact }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}
           if-no-files-found: error
