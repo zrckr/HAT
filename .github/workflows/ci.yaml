@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: 
+    branches:
     - '**'
-    tags-ignore: 
+    tags-ignore:
     - '**'
     paths-ignore:
       - '.github/*'
@@ -28,17 +28,18 @@ jobs:
       - name: Restore packages
         run: dotnet restore Plugin/FEZ.HAT.mm.csproj
 
-      - name: Build
-        run: dotnet build Plugin/FEZ.HAT.mm.csproj -c Debug
+      - name: Build plugin
+        run: dotnet build Plugin/FEZ.HAT.mm.csproj -c Release
 
-      - name: Upload artifact
+      - name: Upload plugin
         uses: actions/upload-artifact@v4
         with:
           name: HAT
-          path: Plugin/bin/Debug/
+          path: Plugin/bin/Release/
           if-no-files-found: error
 
   build-installer:
+    needs: [ build-plugin ]
     strategy:
       matrix:
         include:
@@ -48,11 +49,9 @@ jobs:
           - os: ubuntu-latest
             rid: linux-x64
             artifact: HATinstaller-linux-x64
-            monoInstall: sudo apt-get install -y mono-complete
           - os: macos-latest
             rid: osx-x64
             artifact: HATinstaller-osx-x64
-            monoInstall: brew install mono
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -60,12 +59,14 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
-      - name: Install Mono
-        if: matrix.monoInstall
-        run: ${{ matrix.monoInstall }}
+      - name: Download plugin
+        uses: actions/download-artifact@v4
+        with:
+          name: HAT
+          path: Plugin/bin/Release/
 
       - name: Publish installer
-        run: dotnet publish Installer/FEZ.HAT.Installer.csproj -c Release -r ${{ matrix.rid }}
+        run: dotnet publish Installer/FEZ.HAT.Installer.csproj -c Release -r ${{ matrix.rid }} -p:BuildProjectReferences=false
 
       - name: Rename artifact
         shell: bash

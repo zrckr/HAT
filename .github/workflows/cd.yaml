@@ -6,7 +6,29 @@ on:
       - '*'
 
 jobs:
-  build:
+  build-plugin:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore packages
+        run: dotnet restore Plugin/FEZ.HAT.mm.csproj
+
+      - name: Build plugin
+        run: dotnet build Plugin/FEZ.HAT.mm.csproj -c Release
+
+      - name: Upload plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: HAT
+          path: Plugin/bin/Release/
+          if-no-files-found: error
+
+  build-installer:
+    needs: [ build-plugin ]
     strategy:
       matrix:
         include:
@@ -16,11 +38,9 @@ jobs:
           - os: ubuntu-latest
             rid: linux-x64
             artifact: HATinstaller-linux-x64
-            monoInstall: sudo apt-get install -y mono-complete
           - os: macos-latest
             rid: osx-x64
             artifact: HATinstaller-osx-x64
-            monoInstall: brew install mono
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -28,12 +48,14 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
-      - name: Install Mono
-        if: matrix.monoInstall
-        run: ${{ matrix.monoInstall }}
+      - name: Download plugin
+        uses: actions/download-artifact@v4
+        with:
+          name: HAT
+          path: Plugin/bin/Release/
 
       - name: Publish installer
-        run: dotnet publish Installer/FEZ.HAT.Installer.csproj -c Release -r ${{ matrix.rid }}
+        run: dotnet publish Installer/FEZ.HAT.Installer.csproj -c Release -r ${{ matrix.rid }} -p:BuildProjectReferences=false
 
       - name: Rename artifact
         shell: bash
@@ -50,7 +72,7 @@ jobs:
 
   release:
     if: github.repository == 'FEZModding/HAT'
-    needs: [ build ]
+    needs: [ build-installer ]
     runs-on: ubuntu-latest
     steps:
       - name: Download installers
@@ -73,10 +95,10 @@ jobs:
             FEZ will be detected automatically from your Steam or GOG library.
             If detection fails, drop the installer into your FEZ game folder
             and run it from there, or use `--path <dir>`.
-          
+
           files: |
             HATinstaller-win-x64.exe/HATinstaller-win-x64.exe
             HATinstaller-linux-x64/HATinstaller-linux-x64
             HATinstaller-osx-x64/HATinstaller-osx-x64
-          
+
           fail_on_unmatched_files: true
