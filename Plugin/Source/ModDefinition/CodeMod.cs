@@ -44,13 +44,16 @@ namespace HatModLoader.Source.ModDefinition
                 }
                 
                 // Entrypoint class may load other components (services) via Game.Components (Game.Services)
-                Logger.Log("HAT", LogSeverity.Information, $"Starting at entrypoint {entrypoint}.");
+                Logger.Log("HAT", LogSeverity.Information, 
+                    $"Starting at entrypoint component {entrypoint} in assembly {Assembly.GetName().Name}.");
                 types = new [] { Assembly.GetType(entrypoint) };
             }
             else
             {
                 // Use backward compatible method
-                Logger.Log("HAT", LogSeverity.Warning, "No entrypoint was specified. Loading all public components...");
+                Logger.Log("HAT", LogSeverity.Warning, 
+                    $"No entrypoint was specified for assembly {Assembly.GetName().Name}. " +
+                    "Loading all public components instead.");
                 types = Assembly.GetExportedTypes();
             }
             
