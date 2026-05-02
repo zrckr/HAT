@@ -36,7 +36,9 @@
     <ProjectReference Include="..\Plugin\FEZ.HAT.mm.csproj"/>
   </ItemGroup>
 
-  <Target Name="BundleHatMod" AfterTargets="ResolveProjectReferences">
+  <Target Name="BundleHatMod" 
+          AfterTargets="ResolveProjectReferences" 
+          Condition="'$(DesignTimeBuild)' != 'true'">
     <MSBuild Projects="@(ProjectReference)"
              Targets="GetTargetPath"
              Properties="Configuration=$(Configuration)"
