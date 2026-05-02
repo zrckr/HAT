@@ -39,6 +39,7 @@
   <Target Name="BundleHatMod" AfterTargets="ResolveProjectReferences">
     <MSBuild Projects="@(ProjectReference)"
              Targets="GetTargetPath"
+             Properties="Configuration=$(Configuration)"
              Condition="'%(ProjectReference.Filename)' == 'FEZ.HAT.mm'">
       <Output TaskParameter="TargetOutputs" ItemName="HatModAssembly"/>
     </MSBuild>
