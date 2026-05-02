@@ -146,7 +146,7 @@ namespace FezGame.Components
             Viewport viewport = DrawingTools.GetViewport();
 
             int modCount = Hat.Instance.Mods.Count;
-            string hatVersion = $"{Hat.Version}{Hat.Suffix} ({Hat.CommitHash})";
+            string hatVersion = $"{Hat.Version}{Hat.Suffix}";
             string hatText = $"HAT Mod Loader, version {hatVersion}, {modCount} mod{(modCount != 1 ? "s" : "")} installed";
             if (modCount == 69) hatText += "... nice";
 

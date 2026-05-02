@@ -29,7 +29,7 @@ namespace HatModLoader.Source
         public const string CommitHash = ThisAssembly.Git.Branch + "-" + ThisAssembly.Git.Commit;
 
 #if DEBUG
-        public const string Suffix = "-dev";
+        public const string Suffix = $"-dev ({CommitHash})";
 #else
         public const string Suffix = "";
 #endif
@@ -47,7 +47,7 @@ namespace HatModLoader.Source
 
         private void Initialize()
         {
-            Logger.Log("HAT", $"HAT Mod Loader {Version}");
+            Logger.Log("HAT", $"HAT Mod Loader {Version}{Suffix}");
 
             if (GetModProxies(out var proxies))
             {
