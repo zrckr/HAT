@@ -22,9 +22,13 @@
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\**\*.*" LogicalName="%(Filename)%(Extension)"/>
+  </ItemGroup>
+
   <!-- Build operations -->
 
-<Target Name="CleanUpHooksLibrary" BeforeTargets="Clean">
+  <Target Name="CleanUpHooksLibrary" BeforeTargets="Clean">
     <Delete Files="$(TargetDir)FEZ.Hooks.mm.dll" />
     <RemoveDir Directories="$(TargetDir)HATDependencies" />
   </Target>

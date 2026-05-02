@@ -1,0 +1,5 @@
+# List of directories and zip archives to ignore when loading mods, one per line.
+# Lines starting with # will be ignored.
+                
+NameOfModDirectoryYouWantToIgnore
+NameOfZippedModYouWantToIgnore.zip

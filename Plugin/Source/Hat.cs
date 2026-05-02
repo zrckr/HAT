@@ -1,4 +1,5 @@
-﻿using Common;
+﻿using System.Reflection;
+using Common;
 using FezEngine.Tools;
 using FezGame;
 using FezGame.Services;
@@ -230,28 +231,13 @@ namespace HatModLoader.Source
             AssemblyResolverRegistry.Register(new HatSubdirectoryAssemblyResolver("FEZRepacker.Core"));
         }
 
-        private static IList<string> InitializeIgnoredModsList()
-        {
-            const string defaultContent =
-                "# List of directories and zip archives to ignore when loading mods, one per line.\n" +
-                "# Lines starting with # will be ignored.\n\n" +
-                "ExampleDirectoryModName\n" +
-                "ExampleZipPackageName.zip\n";
-            return LoadModsTextList("ignorelist.txt", defaultContent);
-        }
-
-        private static IList<string> InitializePriorityList()
-        {
-            const string defaultContent = "# List of directories and zip archives to prioritize during mod loading.\n" +
-                                          "# If present on this list, the mod will be loaded before other mods not listed here or listed below it,\n" +
-                                          "# including newer versions of the same mod. However, it does not override dependency ordering.\n" +
-                                          "# Lines starting with # will be ignored.\n\n" +
-                                          "ExampleDirectoryModName\n" +
-                                          "ExampleZipPackageName.zip\n";
-            return LoadModsTextList("prioritylist.txt", defaultContent);
-        }
-
-        private static IList<string> LoadModsTextList(string path, string defaultContent)
+        private static IList<string> InitializeIgnoredModsList() =>
+            LoadModsTextList("ignorelist.txt", "ignorelist.default.txt");
+        
+        private static IList<string> InitializePriorityList() =>
+            LoadModsTextList("prioritylist.txt", "prioritylist.default.txt");
+        
+        private static IList<string> LoadModsTextList(string path, string defaultContentResourceName)
         {
             if (!Directory.Exists(ModsDirectory))
             {
@@ -262,7 +248,7 @@ namespace HatModLoader.Source
             var fullPath = Path.Combine(ModsDirectory, path);
             if (!File.Exists(fullPath))
             {
-                File.WriteAllText(fullPath, defaultContent);
+                File.WriteAllText(fullPath, LoadDefaultTextList(defaultContentResourceName));
                 return new List<string>();
             }
 
@@ -289,6 +275,18 @@ namespace HatModLoader.Source
             }
 
             return modsList;
+        }
+
+        private static string LoadDefaultTextList(string defaultContentResourceName)
+        {
+            var resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream(defaultContentResourceName);
+            if (resourceStream == null)
+            {
+                return string.Empty;
+            }
+            
+            using var resourceReader = new StreamReader(resourceStream);
+            return resourceReader.ReadToEnd();
         }
     }
 }

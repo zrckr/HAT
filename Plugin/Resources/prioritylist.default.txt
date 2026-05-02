@@ -1,0 +1,7 @@
+# List of directories and zip archives to prioritize during mod loading
+# If present on this list, the mod will be loaded before other mods not listed here or listed below it,
+# including newer versions of the same mod. However, it does not override dependency ordering.
+# Lines starting with # will be ignored.
+                                          
+ThisModDirectoryWillBeLoadedFirst
+ThisZipModWillLoadAfterThat.zip
