@@ -53,22 +53,16 @@
     <Error Text="FEZ.HAT.mm output not found: $(HatModOutputDir)"
            Condition="!Exists('$(HatModOutputDir)')"/>
 
-    <ReadLinesFromFile File="$(MSBuildThisFileDirectory)Manifest">
-      <Output TaskParameter="Lines" ItemName="HatManifestLines"/>
-    </ReadLinesFromFile>
-
     <ItemGroup>
-      <HatModFiles Include="$(HatModOutputDir)%(HatManifestLines.Identity)">
-        <DestPath>%(HatManifestLines.Identity)</DestPath>
-      </HatModFiles>
-      <HatModFiles Include="$(HatModOutputDir)FEZ.HAT.mm.pdb" Condition="'$(Configuration)' == 'Debug'">
-        <DestPath>FEZ.HAT.mm.pdb</DestPath>
-      </HatModFiles>
+      <HatDependenciesFiles Include="$(HatModOutputDir)HATDependencies\**\*.*"/>
+      <HatModFiles Include="$(HatModOutputDir)FEZ.HAT.mm.dll"/>
+      <HatModFiles Include="$(HatModOutputDir)FEZ.Hooks.mm.dll"/>
+      <HatModFiles Include="$(HatModOutputDir)FEZ.HAT.mm.pdb" Condition="'$(Configuration)' == 'Debug'"/>
     </ItemGroup>
 
     <RemoveDir Directories="$(HatStagingDir)"/>
-    <Copy SourceFiles="@(HatModFiles)"
-          DestinationFiles="@(HatModFiles->'$(HatStagingDir)%(DestPath)')"/>
+    <Copy SourceFiles="@(HatDependenciesFiles)" DestinationFolder="$(HatStagingDir)HATDependencies\%(RecursiveDir)"/>
+    <Copy SourceFiles="@(HatModFiles)" DestinationFolder="$(HatStagingDir)"/>
 
     <ZipDirectory SourceDirectory="$(HatStagingDir)"
                   DestinationFile="$(HatZipPath)"
