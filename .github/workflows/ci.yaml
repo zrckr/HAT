@@ -29,13 +29,13 @@ jobs:
         run: dotnet restore Plugin/FEZ.HAT.mm.csproj
 
       - name: Build plugin
-        run: dotnet build Plugin/FEZ.HAT.mm.csproj -c Release
+        run: dotnet build Plugin/FEZ.HAT.mm.csproj -c Debug
 
       - name: Upload plugin
         uses: actions/upload-artifact@v4
         with:
           name: HAT
-          path: Plugin/bin/Release/
+          path: Plugin/bin/Debug/
           if-no-files-found: error
 
   build-installer:
@@ -63,15 +63,15 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: HAT
-          path: Plugin/bin/Release/
+          path: Plugin/bin/Debug/
 
       - name: Publish installer
-        run: dotnet publish Installer/FEZ.HAT.Installer.csproj -c Release -r ${{ matrix.rid }} -p:BuildProjectReferences=false
+        run: dotnet publish Installer/FEZ.HAT.Installer.csproj -c Debug -r ${{ matrix.rid }} -p:BuildProjectReferences=false
 
       - name: Rename artifact
         shell: bash
         run: |
-          src=$(find Installer/bin/Release -path '*/publish/HATinstaller' -o -path '*/publish/HATinstaller.exe' | head -1)
+          src=$(find Installer/bin/Debug -path '*/publish/HATinstaller' -o -path '*/publish/HATinstaller.exe' | head -1)
           mv "$src" "${{ matrix.artifact }}"
 
       - name: Upload artifact
