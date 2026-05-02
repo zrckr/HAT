@@ -46,6 +46,9 @@
 
   <ItemGroup>
     <PackageReference Include="FEZRepacker.Core" Version="1.2.1" />
+    <PackageReference Include="GitInfo" Version="3.6.0">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.26">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

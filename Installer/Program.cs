@@ -11,7 +11,7 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoMod;
 
-namespace FEZ.HAT.cli;
+namespace FEZ.HAT.Installer;
 
 public static class Program
 {
@@ -54,9 +54,10 @@ public static class Program
         Console.WriteLine(logo.ReadToEnd());
 
         const int logoWidth = 50;
-        var version = Assembly.GetExecutingAssembly().GetName().Version!.ToString(3);
+        const string version = $"{ThisAssembly.Git.BaseVersion.Major}.{ThisAssembly.Git.BaseVersion.Minor}.{ThisAssembly.Git.BaseVersion.Patch}";
+        const string commit = ThisAssembly.Git.Branch + "-" + ThisAssembly.Git.Commit;;
 
-        Console.WriteLine($"HAT Installer v{version}".PadLeft(logoWidth));
+        Console.WriteLine($"HAT Installer v{version} ({commit})".PadLeft(logoWidth));
         Console.WriteLine("Created by zerocker and FEZModding community".PadLeft(logoWidth));
         Console.WriteLine("HAT ASCII logo by Krzyhau".PadLeft(logoWidth));
 

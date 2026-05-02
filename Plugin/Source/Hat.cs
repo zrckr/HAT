@@ -12,8 +12,6 @@ namespace HatModLoader.Source
 {
     public class Hat
     {
-        public static readonly Version Version = new("1.2.1");
-
         private static readonly string ModsDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Mods");
 
         private static readonly IList<string> IgnoredModNames = InitializeIgnoredModsList();
@@ -24,17 +22,17 @@ namespace HatModLoader.Source
 
         public int InvalidModsCount { get; private set; }
 
-        public static string VersionString
-        {
-            get
-            {
+        public const string Version = ThisAssembly.Git.BaseVersion.Major + "." + 
+                                      ThisAssembly.Git.BaseVersion.Minor + "." + 
+                                      ThisAssembly.Git.BaseVersion.Patch;
+
+        public const string CommitHash = ThisAssembly.Git.Branch + "-" + ThisAssembly.Git.Commit;
+
 #if DEBUG
-                return $"{Version}-dev";
+        public const string Suffix = "-dev";
 #else
-                return Version.ToString();
+        public const string Suffix = "";
 #endif
-            }
-        }
 
         public static Hat Instance { get; private set; }
 
@@ -49,7 +47,7 @@ namespace HatModLoader.Source
 
         private void Initialize()
         {
-            Logger.Log("HAT", $"HAT Mod Loader {VersionString}");
+            Logger.Log("HAT", $"HAT Mod Loader {Version}");
 
             if (GetModProxies(out var proxies))
             {
@@ -60,7 +58,7 @@ namespace HatModLoader.Source
                     return; // HAT initialized
                 }
             }
-            
+
             Logger.Log("HAT", LogSeverity.Warning, "Skip the initialization process...");
         }
 
@@ -96,7 +94,8 @@ namespace HatModLoader.Source
 
             if (mods.Count < 1)
             {
-                Logger.Log("HAT", LogSeverity.Warning, "There are no mods to load. Perhaps they are all in 'ignorelist.txt'.");
+                Logger.Log("HAT", LogSeverity.Warning,
+                    "There are no mods to load. Perhaps they are all in 'ignorelist.txt'.");
                 return false;
             }
 
@@ -108,12 +107,12 @@ namespace HatModLoader.Source
             var resolverResult = ModDependencyResolver.Resolve(mods, PriorityModNames);
             Mods.AddRange(resolverResult.LoadOrder);
             InvalidModsCount = resolverResult.Invalid.Count;
-            
+
             foreach (var node in resolverResult.Invalid)
             {
-                Logger.Log("HAT", $"Mod '{node.Mod.Metadata.Name}' is invalid: {node.Details}"); 
+                Logger.Log("HAT", $"Mod '{node.Mod.Metadata.Name}' is invalid: {node.Details}");
             }
-            
+
             Logger.Log("HAT", "The loading order of mods:");
             foreach (var mod in Mods)
             {
@@ -125,7 +124,7 @@ namespace HatModLoader.Source
         {
             var assetModCount = 0;
             var codeModsCount = 0;
-            
+
             foreach (var mod in Mods)
             {
                 if (AssetMod.TryLoad(mod.FileProxy, out var assetMod))
@@ -140,13 +139,13 @@ namespace HatModLoader.Source
                     codeModsCount += 1;
                 }
             }
-            
+
             var modsText = $"{Mods.Count} mod{(Mods.Count != 1 ? "s" : "")}";
             var codeModsText = $"{codeModsCount} code mod{(codeModsCount != 1 ? "s" : "")}";
             var assetModsText = $"{assetModCount} asset mod{(assetModCount != 1 ? "s" : "")}";
             Logger.Log("HAT", $"Successfully loaded {modsText} ({codeModsText} and {assetModsText})");
         }
-        
+
         public void InitializeAssemblies()
         {
             foreach (var mod in Mods)
@@ -162,7 +161,7 @@ namespace HatModLoader.Source
                 mod.InjectComponents();
             }
         }
-    
+
         public IEnumerable<Asset> GetFullAssetList()
         {
             var assets = new List<Asset>();
@@ -187,7 +186,7 @@ namespace HatModLoader.Source
                     }
                 }
             }
-            
+
             if (changedAssets.Count < 1)
             {
                 return;

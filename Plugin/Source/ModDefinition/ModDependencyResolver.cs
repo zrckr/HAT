@@ -69,7 +69,8 @@ namespace HatModLoader.Source.ModDefinition
                 return ModDependencyStatus.InvalidNotFound;
             }
 
-            if (hatDependency.MinimumVersion != null && Hat.Version < hatDependency.MinimumVersion)
+            var hatVersion = new Version(Hat.Version);
+            if (hatDependency.MinimumVersion != null && hatVersion < hatDependency.MinimumVersion)
             {
                 details = $"Requires HAT >={hatDependency.MinimumVersion}, found {Hat.Version}";
                 return ModDependencyStatus.InvalidVersion;
