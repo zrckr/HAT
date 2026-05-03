@@ -5,6 +5,7 @@ using HatModLoader.Source;
 using Microsoft.Xna.Framework;
 using MonoMod;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace FezGame
 {
@@ -12,6 +13,7 @@ namespace FezGame
     {
         public static Hat HatML;
 
+        [MethodImpl(MethodImplOptions.ForwardRef)]
         public extern void orig_ctor();
         [MonoModConstructor]
         public void ctor()
@@ -27,6 +29,7 @@ namespace FezGame
             orig_ctor();
         }
 
+        [MethodImpl(MethodImplOptions.ForwardRef)]
         protected extern void orig_Initialize();
         protected override void Initialize()
         {
@@ -37,6 +40,7 @@ namespace FezGame
             Activated += (_, _) => HatML.OnGameActivated();
         }
 
+        [MethodImpl(MethodImplOptions.ForwardRef)]
         internal static extern void orig_LoadComponents(Fez game);
         internal static void LoadComponents(Fez game)
         {
@@ -47,6 +51,7 @@ namespace FezGame
             }
         }
 
+        [MethodImpl(MethodImplOptions.ForwardRef)]
         protected extern void orig_Update(GameTime gameTime);
         protected override void Update(GameTime gameTime)
         {

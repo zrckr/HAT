@@ -1,11 +1,13 @@
 ﻿using Common;
 using HatModLoader.Source;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 
 namespace FezGame
 {
     internal static class patch_Program
     {
+        [MethodImpl(MethodImplOptions.ForwardRef)]
         private static extern void orig_Main(string[] args);
 
         private static void Main(string[] args)

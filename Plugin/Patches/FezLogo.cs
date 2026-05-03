@@ -7,6 +7,7 @@ using HatModLoader.Source;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace FezGame.Components
 {
@@ -14,6 +15,7 @@ namespace FezGame.Components
     {
         public patch_FezLogo(Game game) : base(game){}
 
+        [MethodImpl(MethodImplOptions.ForwardRef)]
         public extern void orig_Initialize();
         public override void Initialize()
         {
@@ -133,6 +135,7 @@ namespace FezGame.Components
             WireMeshField.SetValue(this, WireMesh);
         }
 
+        [MethodImpl(MethodImplOptions.ForwardRef)]
         public extern void orig_Draw(GameTime gameTime);
         public override void Draw(GameTime gameTime)
         {
