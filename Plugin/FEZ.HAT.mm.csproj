@@ -29,8 +29,8 @@
   <!-- Build operations -->
 
   <Target Name="CleanUpHooksLibrary" BeforeTargets="Clean">
-    <Delete Files="$(TargetDir)FEZ.Hooks.mm.dll" />
-    <RemoveDir Directories="$(TargetDir)HATDependencies" />
+    <Delete Files="$(TargetDir)FEZ.Hooks.mm.dll;$(TargetDir)HAT.zip" />
+    <RemoveDir Directories="$(TargetDir)HATDependencies;$(TargetDir)HAT.staging" />
   </Target>
 
   <Target Name="RearrangeDependencies" AfterTargets="Build">
@@ -44,6 +44,29 @@
 
     <Move SourceFiles="@(MonoModDependencies)" DestinationFolder="$(TargetDir)HATDependencies/MonoMod"/>
     <Move SourceFiles="@(RepackerDependencies)" DestinationFolder="$(TargetDir)HATDependencies/FEZRepacker.Core"/>
+  </Target>
+
+  <Target Name="BundleHatMod" AfterTargets="BuildHookBinaries">
+    <PropertyGroup>
+      <HatStagingDir>$(TargetDir)HAT.staging\</HatStagingDir>
+      <HatZipPath>$(TargetDir)HAT.zip</HatZipPath>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <HatDependenciesFiles Include="$(TargetDir)HATDependencies\**\*.*"/>
+      <HatModFiles Include="$(TargetDir)FEZ.HAT.mm.dll"/>
+      <HatModFiles Include="$(TargetDir)FEZ.Hooks.mm.dll"/>
+      <HatModFiles Include="$(TargetDir)FEZ.HAT.mm.pdb" Condition="'$(Configuration)' == 'Debug'"/>
+    </ItemGroup>
+
+    <RemoveDir Directories="$(HatStagingDir)"/>
+    <Copy SourceFiles="@(HatDependenciesFiles)" DestinationFolder="$(HatStagingDir)HATDependencies\%(RecursiveDir)"/>
+    <Copy SourceFiles="@(HatModFiles)" DestinationFolder="$(HatStagingDir)"/>
+
+    <ZipDirectory SourceDirectory="$(HatStagingDir)" DestinationFile="$(HatZipPath)" Overwrite="true"/>
+    <RemoveDir Directories="$(HatStagingDir)"/>
+
+    <Message Text="Bundled HAT mod files into $(HatZipPath)" Importance="high"/>
   </Target>
 
   <!-- Dependencies -->

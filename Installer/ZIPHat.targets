@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <Target Name="ZIPHat" BeforeTargets="CoreCompile" Condition="'$(DesignTimeBuild)' != 'true'">
+
+    <PropertyGroup>
+      <HatZipPath>..\Plugin\bin\$(Configuration)\HAT.zip</HatZipPath>
+    </PropertyGroup>
+    
+    <Error Text="HAT.zip not found at $(HatZipPath)"
+           Condition="!Exists('$(HatZipPath)')"/>
+
+    <ItemGroup>
+      <EmbeddedResource Include="$(HatZipPath)" LogicalName="HAT.zip"/>
+    </ItemGroup>
+  </Target>
+
+</Project>
