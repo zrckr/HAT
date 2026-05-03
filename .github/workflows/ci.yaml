@@ -83,4 +83,5 @@ jobs:
         with:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.artifact }}
+          archive: false
           if-no-files-found: error
