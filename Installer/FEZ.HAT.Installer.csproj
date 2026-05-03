@@ -33,7 +33,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Plugin\FEZ.HAT.mm.csproj"/>
+    <ProjectReference Include="..\Plugin\FEZ.HAT.mm.csproj">
+      <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
+    </ProjectReference>
   </ItemGroup>
 
   <!-- Rider design-time: resolve ThisAssembly even before HAT.zip exists -->
