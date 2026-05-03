@@ -20,8 +20,8 @@ jobs:
   build-plugin:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '9.0.x'
 
@@ -32,7 +32,7 @@ jobs:
         run: dotnet build Plugin/FEZ.HAT.mm.csproj -c Debug
 
       - name: Upload plugin
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: HAT
           path: Plugin/bin/Debug/
@@ -54,13 +54,13 @@ jobs:
             artifact: HATinstaller-osx-x64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '9.0.x'
 
       - name: Download plugin
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: HAT
           path: Plugin/bin/Debug/
@@ -75,7 +75,7 @@ jobs:
           mv "$src" "${{ matrix.artifact }}"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.artifact }}
