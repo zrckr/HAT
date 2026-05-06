@@ -219,9 +219,13 @@ namespace HatModLoader.Source
             var currentLevel = levelManager.Name;
             if (!string.IsNullOrEmpty(currentLevel))
             {
-                levelManager.Name = null;
-                levelManager.ChangeLevel(currentLevel);
-                Logger.Log("HAT", $"Reloading {currentLevel}...");
+                var currentLevelAssetPath = "levels\\" + currentLevel.ToLower();
+                if (changedAssets.Any(a => a.AssetPath == currentLevelAssetPath))
+                {
+                    levelManager.Name = null;
+                    levelManager.ChangeLevel(currentLevel);
+                    Logger.Log("HAT", $"Reloading {currentLevel}...");
+                }
             }
         }
 
